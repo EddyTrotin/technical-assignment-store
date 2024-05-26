@@ -1,6 +1,5 @@
+import "reflect-metadata";
 import { JSONArray, JSONObject, JSONPrimitive } from "./json-types";
-
-export type Permission = "r" | "w" | "rw" | "none";
 
 export type StoreResult = Store | JSONPrimitive | undefined;
 
@@ -20,26 +19,34 @@ export interface IStore {
   entries(): JSONObject;
 }
 
-export function Restrict(...params: unknown[]): any {
+export type Permission = "r" | "w" | "rw" | "none";
+
+export function Restrict(perm?: Permission): (target: IStore, propertyKey: string) => void {
+  return function (target: IStore, propertyKey: string) {
+    Reflect.defineMetadata("permission", perm, target, propertyKey);
+  };
 }
 
 export class Store implements IStore {
   defaultPolicy: Permission = "rw";
 
   allowedToRead(key: string): boolean {
-    throw new Error("Method not implemented.");
+    const perm: string = Reflect.getMetadata("permission", this, key)
+    return perm ? perm.includes('r') : this.defaultPolicy.includes('r')
   }
 
   allowedToWrite(key: string): boolean {
-    throw new Error("Method not implemented.");
+    const perm: string = Reflect.getMetadata("permission", this, key)
+    return perm ? perm.includes('w') : this.defaultPolicy.includes('w')
   }
 
   read(path: string): StoreResult {
-    throw new Error("Method not implemented.");
+    return (this as any)[path];
   }
 
   write(path: string, value: StoreValue): StoreValue {
-    throw new Error("Method not implemented.");
+    (this as any)[path] = value;
+    return value;
   }
 
   writeEntries(entries: JSONObject): void {
