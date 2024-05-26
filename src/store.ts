@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { JSONArray, JSONObject, JSONPrimitive } from "./json-types";
+import { JSONArray, JSONObject, JSONPrimitive, JSONValue } from "./json-types";
 
 export type StoreResult = Store | JSONPrimitive | undefined;
 
@@ -27,6 +27,9 @@ export function Restrict(perm?: Permission): (target: IStore, propertyKey: strin
   };
 }
 
+const primitives = ['string', 'number', 'boolean', 'null']
+const isPrimitive = (x: any): x is JSONPrimitive => primitives.includes(x);
+
 export class Store implements IStore {
   defaultPolicy: Permission = "rw";
 
@@ -41,17 +44,57 @@ export class Store implements IStore {
   }
 
   read(path: string): StoreResult {
-    if (!this.allowedToRead(path)) throw new Error('READ_NOT_ALLOWED')
-    return (this as any)[path];
+    const keys = path.split(':');
+    const firstKey = keys.shift() as string;
+
+    if (!this.allowedToRead(firstKey)) throw new Error('READ_NOT_ALLOWED');
+
+    const data = (this as any)[firstKey];
+    if (data instanceof Store) {
+      return data.read(keys.join(':'));
+    }
+    let finalValue = data;
+    if (keys.length > 0) {
+      keys.forEach((key, index) => {
+        finalValue = data[key];
+      });
+    }
+
+    return finalValue
   }
 
   write(path: string, value: StoreValue): StoreValue {
-    (this as any)[path] = value;
+    const store = this as any;
+
+    const keys = path.split(':');
+    const firstKey = keys.shift() as string;
+
+    const data = store[firstKey];
+    if (data instanceof Store) {
+      return data.write(keys.join(':'), value);
+    }
+
+    if (!this.allowedToWrite(firstKey)) throw new Error('WRITE_NOT_ALLOWED');
+
+    if (keys.length === 0) {
+      store[firstKey] = value
+    }
+    else {
+      const finalValue: Record<string, StoreValue> = {};
+      keys.forEach((key, index) => {
+        finalValue[key] = (keys.length - 1 === index) ? value : {}
+      });
+      store[firstKey] = finalValue;
+    }
+
     return value;
   }
 
   writeEntries(entries: JSONObject): void {
-    throw new Error("Method not implemented.");
+    for (const [key, value] of Object.entries(entries)) {
+      console.log(`${key}: ${value}`);
+      this.write(key, value);
+    }
   }
 
   entries(): JSONObject {
