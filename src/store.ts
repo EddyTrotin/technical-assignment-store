@@ -41,6 +41,7 @@ export class Store implements IStore {
   }
 
   read(path: string): StoreResult {
+    if (!this.allowedToRead(path)) throw new Error('READ_NOT_ALLOWED')
     return (this as any)[path];
   }
 
