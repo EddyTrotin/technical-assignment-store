@@ -27,20 +27,20 @@ export function Restrict(perm?: Permission): (target: IStore, propertyKey: strin
   };
 }
 
-const primitives = ['string', 'number', 'boolean', 'null']
+const primitives = ['string', 'number', 'boolean', 'null'];
 const isPrimitive = (x: unknown): boolean => primitives.includes(typeof x);
 
 export class Store implements IStore {
   constructor(public defaultPolicy: Permission = "rw") { }
 
   allowedToRead(key: string): boolean {
-    const perm: string = Reflect.getMetadata("permission", this, key)
-    return perm ? perm.includes('r') : this.defaultPolicy.includes('r')
+    const perm: string = Reflect.getMetadata("permission", this, key);
+    return perm ? perm.includes('r') : this.defaultPolicy.includes('r');
   }
 
   allowedToWrite(key: string): boolean {
-    const perm: Permission = Reflect.getMetadata("permission", this, key)
-    return perm ? perm.includes('w') : this.defaultPolicy.includes('w')
+    const perm: Permission = Reflect.getMetadata("permission", this, key);
+    return perm ? perm.includes('w') : this.defaultPolicy.includes('w');
   }
 
   read(path: string): StoreResult {
@@ -98,12 +98,12 @@ export class Store implements IStore {
   }
 
   entries(): JSONObject {
-    const entries: Record<string, JSONObject> = {}
+    const entries: Record<string, JSONObject> = {};
     for (const [key, value] of Object.entries(this)) {
       if (key === 'defaultPolicy') continue;
       if (!this.allowedToRead(key)) continue;
-      entries[key] = value
+      entries[key] = value;
     }
-    return entries
+    return entries;
   }
 }
