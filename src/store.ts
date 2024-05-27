@@ -31,7 +31,7 @@ const primitives = ['string', 'number', 'boolean', 'null']
 const isPrimitive = (x: unknown): boolean => primitives.includes(typeof x);
 
 export class Store implements IStore {
-  defaultPolicy: Permission = "rw";
+  constructor(public defaultPolicy: Permission = "rw") { }
 
   allowedToRead(key: string): boolean {
     const perm: string = Reflect.getMetadata("permission", this, key)
@@ -79,7 +79,7 @@ export class Store implements IStore {
       if (isPrimitive(value)) {
         store[firstKey] = value;
       } else {
-        store[firstKey] = new Store();
+        store[firstKey] = new Store(this.defaultPolicy);
         store[firstKey].writeEntries(value as JSONObject);
       }
     }
