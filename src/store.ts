@@ -28,7 +28,7 @@ export function Restrict(perm?: Permission): (target: IStore, propertyKey: strin
 }
 
 const primitives = ['string', 'number', 'boolean', 'null']
-const isPrimitive = (x: any): boolean => primitives.includes(typeof x);
+const isPrimitive = (x: unknown): boolean => primitives.includes(typeof x);
 
 export class Store implements IStore {
   defaultPolicy: Permission = "rw";
@@ -39,7 +39,7 @@ export class Store implements IStore {
   }
 
   allowedToWrite(key: string): boolean {
-    const perm: string = Reflect.getMetadata("permission", this, key)
+    const perm: Permission = Reflect.getMetadata("permission", this, key)
     return perm ? perm.includes('w') : this.defaultPolicy.includes('w')
   }
 
