@@ -49,29 +49,22 @@ export class Store implements IStore {
 
     if (!this.allowedToRead(firstKey)) throw new Error('READ_NOT_ALLOWED');
 
-    const data = (this as any)[firstKey] as Store;
+    const data = (this as never)[firstKey] as Store;
     if (data instanceof Store) {
       return data.read(keys.join(':'));
     }
 
-    if (path === '') return this
-
-    if (keys.length === 0) {
-      if (data === undefined) return undefined;
-      if (!isPrimitive(data)) return this;
-      return data;
-    }
+    if (path === '') return this;
 
     return data;
   }
 
   write(path: string, value: StoreValue): StoreValue {
     const store = this as any;
-
     const keys = path.split(':');
     const firstKey = keys.shift() as string;
+    const data = (this as never)[firstKey] as Store;
 
-    const data = store[firstKey] as Store;
     if (data instanceof Store) {
       return data.write(keys.join(':'), value);
     }
@@ -80,15 +73,15 @@ export class Store implements IStore {
 
     if (data === undefined) {
       if (isPrimitive(value)) {
-        store[firstKey] = value
+        store[firstKey] = value;
       } else {
-        store[firstKey] = new Store()
+        store[firstKey] = new Store();
         store[firstKey].writeEntries(value as JSONObject);
       }
     }
 
     if (isPrimitive(value)) {
-      store[firstKey] = value
+      store[firstKey] = value;
     }
 
     return value;
