@@ -56,6 +56,10 @@ export class Store implements IStore {
 
     if (path === '') return this;
 
+    if (typeof data === 'function') {
+      return (this as any)[firstKey]().read(keys.join(''))
+    }
+
     return data;
   }
 
