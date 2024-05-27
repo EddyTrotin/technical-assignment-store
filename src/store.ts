@@ -28,7 +28,7 @@ export function Restrict(perm?: Permission): (target: IStore, propertyKey: strin
 }
 
 const primitives = ['string', 'number', 'boolean', 'null']
-const isPrimitive = (x: any): x is JSONPrimitive => primitives.includes(x);
+const isPrimitive = (x: any): boolean => primitives.includes(typeof x);
 
 export class Store implements IStore {
   defaultPolicy: Permission = "rw";
@@ -49,18 +49,20 @@ export class Store implements IStore {
 
     if (!this.allowedToRead(firstKey)) throw new Error('READ_NOT_ALLOWED');
 
-    const data = (this as never)[firstKey] as Store;
+    const data = (this as any)[firstKey] as Store;
     if (data instanceof Store) {
       return data.read(keys.join(':'));
     }
-    let finalValue = data;
-    if (keys.length > 0) {
-      keys.forEach((key: string) => {
-        finalValue = data[key];
-      });
+
+    if (path === '') return this
+
+    if (keys.length === 0) {
+      if (data === undefined) return undefined;
+      if (!isPrimitive(data)) return this;
+      return data;
     }
 
-    return finalValue;
+    return data;
   }
 
   write(path: string, value: StoreValue): StoreValue {
@@ -76,15 +78,17 @@ export class Store implements IStore {
 
     if (!this.allowedToWrite(firstKey)) throw new Error('WRITE_NOT_ALLOWED');
 
-    if (keys.length === 0) {
-      store[firstKey] = value;
+    if (data === undefined) {
+      if (isPrimitive(value)) {
+        store[firstKey] = value
+      } else {
+        store[firstKey] = new Store()
+        store[firstKey].writeEntries(value as JSONObject);
+      }
     }
-    else {
-      const finalValue: Record<string, StoreValue> = {};
-      keys.forEach((key, index) => {
-        finalValue[key] = (keys.length - 1 === index) ? value : {};
-      });
-      store[firstKey] = finalValue;
+
+    if (isPrimitive(value)) {
+      store[firstKey] = value
     }
 
     return value;
@@ -92,7 +96,6 @@ export class Store implements IStore {
 
   writeEntries(entries: JSONObject): void {
     for (const [key, value] of Object.entries(entries)) {
-      console.log(`${key}: ${value}`);
       this.write(key, value);
     }
   }
