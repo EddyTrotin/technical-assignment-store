@@ -57,14 +57,15 @@ export class Store implements IStore {
     if (path === '') return this;
 
     if (typeof data === 'function') {
-      return (this as any)[firstKey]().read(keys.join(':'))
+      const store = this as unknown as Store & Record<string, StoreValue>;
+      return (store[firstKey] as Function)().read(keys.join(':'));
     }
 
     return data;
   }
 
   write(path: string, value: StoreValue): StoreValue {
-    const store = this as any;
+    const store = this as unknown as Store & Record<string, StoreValue>;
     const keys = path.split(':');
     const firstKey = keys.shift() as string;
     const data = (this as never)[firstKey] as Store;
@@ -79,8 +80,9 @@ export class Store implements IStore {
       if (isPrimitive(value)) {
         store[firstKey] = value;
       } else {
-        store[firstKey] = new Store(this.defaultPolicy);
-        store[firstKey].writeEntries(value as JSONObject);
+        const childStore = new Store(this.defaultPolicy);
+        childStore.writeEntries(value as JSONObject);
+        store[firstKey] = childStore;
       }
     }
 
