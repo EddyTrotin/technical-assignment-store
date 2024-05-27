@@ -19,11 +19,20 @@ describe("UserStore class - Basic Operations", () => {
     userStore = new UserStore();
   });
 
-  it("should allow reading allowed keys", () => {
-    expect(userStore.allowedToRead("name")).toBe(true);
+  it("should read non existing keys", () => {
+    expect(userStore.read("nonExistingKey")).toBe(undefined);
   });
 
-  it("should allow writing allowed keys", () => {
+  it("should read allowed keys", () => {
+    expect(userStore.read("name")).toBe("John Doe");
+  });
+
+  it("should write non existing keys", () => {
+    userStore.write("nonExistingKey", "John Doe");
+    expect(userStore.read("nonExistingKey")).toBe("John Doe");
+  });
+
+  it("should write allowed keys", () => {
     userStore.write("name", "Jhone Known");
     expect(userStore.read("name")).toBe("Jhone Known");
   });
@@ -32,7 +41,15 @@ describe("UserStore class - Basic Operations", () => {
     expect(userStore.allowedToRead("nonExistingKey")).toBe(true);
   });
 
+  it("should allow reading allowed keys", () => {
+    expect(userStore.allowedToRead("name")).toBe(true);
+  });
+
   it("should allow writing non existing keys", () => {
+    expect(userStore.allowedToWrite("nonExistingKey")).toBe(true);
+  });
+
+  it("should allow writing allowed keys", () => {
     expect(userStore.allowedToWrite("nonExistingKey")).toBe(true);
   });
 });
@@ -53,11 +70,27 @@ describe("AdminStore class - Inheritance and Permissions", () => {
     adminStore = new AdminStore(userStore);
   });
 
-  it("should disallow reading admin name", () => {
-    expect(() => adminStore.read("name")).toThrow();
+  it("should throw when reading disallowed key", () => {
+    expect(() => adminStore.read("name")).toThrow(Error);
   });
 
-  it("should not allow reading disallowed keys", () => {
+  it("should throw when reading non existing key", () => {
+    expect(() => adminStore.read("nonExistingKey")).toThrow(Error);
+  });
+
+  it("should throw when writing disallowed key", () => {
+    expect(() => adminStore.write("name", "John Smith")).toThrow(Error);
+  });
+
+  it("should throw when writing non existing key", () => {
+    expect(() => adminStore.write("nonExistingKey", "John Smith")).toThrow(Error);
+  });
+
+  it("should not allow reading disallowed key", () => {
+    expect(adminStore.allowedToRead("name")).toBe(false);
+  });
+
+  it("should not allow reading non existing keys", () => {
     expect(adminStore.allowedToRead("nonExistingKey")).toBe(false);
   });
 
@@ -65,7 +98,7 @@ describe("AdminStore class - Inheritance and Permissions", () => {
     expect(adminStore.allowedToWrite("name")).toBe(false);
   });
 
-  it("should not allow writing disallowed keys", () => {
+  it("should not allow writing non existing keys", () => {
     expect(adminStore.allowedToWrite("nonExistingKey")).toBe(false);
   });
 });
@@ -87,7 +120,11 @@ describe("Nested Store Operations", () => {
     adminStore = new AdminStore(userStore);
   });
 
-  it("should allow writing and reading nested keys in user store", () => {
+  it("should allow writing nested keys in user store", () => {
+    expect(userStore.write("profile:name", "John Smith")).toBe("John Smith");
+  });
+
+  it("should allow reading nested keys in user store", () => {
     userStore.write("profile:name", "John Smith");
     expect(userStore.read("profile:name")).toBe("John Smith");
   });
@@ -96,17 +133,21 @@ describe("Nested Store Operations", () => {
     expect(adminStore.read("user:name")).toBe("John Doe");
   });
 
-  it("should allow writing and reading nested keys in user from admin store", () => {
+  it("should allow writing nested keys in user from admin store", () => {
+    expect(adminStore.write("user:profile:name", "John Smith")).toBe("John Smith");
+  });
+
+  it("should allow reading nested keys in user from admin store", () => {
     adminStore.write("user:profile:name", "John Smith");
     expect(adminStore.read("user:profile:name")).toBe("John Smith");
   });
 
   it("should disallow writing nested keys in admin store", () => {
-    expect(() => adminStore.write("profile:name", "John Smith")).toThrow();
+    expect(() => adminStore.write("profile:name", "John Smith")).toThrow(Error);
   });
 
   it("should disallow reading nested keys in admin store", () => {
-    expect(() => adminStore.read("profile:name")).toThrow();
+    expect(() => adminStore.read("profile:name")).toThrow(Error);
   });
 
   it("should write multiple entries to the store", () => {
@@ -122,8 +163,10 @@ describe("Nested Store Operations", () => {
     const entries: JSONObject = { value: "value", store: { value: "value" } };
     store.write("deep", entries);
     const cStore = store.read("deep:store") as Store;
-    cStore.write("deep", entries);
-    expect(store.read("deep:store:deep:store:value")).toBe("value");
+    const entries2: JSONObject = { value: "value", store: { value: "value2" } };
+    cStore.write("deep", entries2);
+    expect(store.read("deep:store:value")).toBe("value");
+    expect(store.read("deep:store:deep:store:value")).toBe("value2");
   });
 });
 
@@ -164,25 +207,25 @@ describe("Restricted Store", () => {
     store.defaultPolicy = "none"; // Restrict all keys
   });
 
-  it("write restricted key", () => {
+  it("should not write over restricted key", () => {
     expect(() => {
       return store.write("restrictedKey", "testValue");
     }).toThrow(Error);
   });
 
-  it("read restricted key", () => {
+  it("should not read restricted key", () => {
     expect(() => {
       return store.read("restrictedKey");
     }).toThrow(Error);
   });
 
-  it("write nested restricted key", () => {
+  it("should not write over nested restricted key", () => {
     expect(() => {
       return store.write("nested:restrictedKey", "testValue");
     }).toThrow(Error);
   });
 
-  it("read nested restricted key", () => {
+  it("should not read nested restricted key", () => {
     expect(() => {
       return store.read("nested:restrictedKey");
     }).toThrow(Error);
@@ -198,7 +241,7 @@ These tests ensure that decorators work as expected, especially when it comes to
 */
 
 describe("Test Store - Decorators", () => {
-  it("trying to set restricted property", () => {
+  it("should not write over restricted property", () => {
     class TestStore extends Store {
       @Restrict("none")
       public restrictedProp?: string;
@@ -209,7 +252,7 @@ describe("Test Store - Decorators", () => {
     }).toThrow(Error);
   });
 
-  it("entries method shows restricted properties", () => {
+  it("should list readable properties", () => {
     class TestStore extends Store {
       @Restrict("r")
       public readableProperty = "test";
@@ -218,7 +261,7 @@ describe("Test Store - Decorators", () => {
     expect(testStore.entries()).toHaveProperty("readableProperty", "test");
   });
 
-  it("entries method hides restricted properties", () => {
+  it("should hide restricted properties", () => {
     class TestStore extends Store {
       @Restrict("none")
       public restrictedProp = "test";
@@ -237,7 +280,7 @@ These tests ensure that default policies are correctly applied to keys with no e
 */
 
 describe("Test Store - Default Policy Behavior", () => {
-  it("disallows writing a key with with default read permission", () => {
+  it("should disallow writing a key with default read permission", () => {
     class TestStore extends Store {
       public defaultPolicy: Permission = "r";
       public defaultRestrictedProp?: string;
@@ -248,7 +291,7 @@ describe("Test Store - Default Policy Behavior", () => {
     }).toThrow(Error);
   });
 
-  it("allows writing a key with no explicit permissions", () => {
+  it("should allow writing a key with no explicit permissions", () => {
     class TestStore extends Store {
       public defaultNonRestrictedProp?: string;
     }
@@ -267,7 +310,12 @@ These tests ensure that the system can correctly handle multi-level nested keys.
 */
 
 describe("Test Store - Multiple Levels of Nested Keys", () => {
-  it("allows writing and reading multi-level nested keys", () => {
+  it("should allow writing multi-level nested keys", () => {
+    const store = new Store();
+    expect(store.write("level1:level2:level3", "testValue")).toBe("testValue");
+  });
+
+  it("should allow reading multi-level nested keys", () => {
     const store = new Store();
     store.write("level1:level2:level3", "testValue");
     expect(store.read("level1:level2:level3")).toBe("testValue");
@@ -283,7 +331,7 @@ These tests verify the behavior of the system when keys are overwritten or permi
 */
 
 describe("Test Store - Behavior when Same Key is Used Multiple Times", () => {
-  it("overwrites key with new value", () => {
+  it("should overwrite key with new value", () => {
     const store = new Store();
     store.defaultPolicy = "rw";
     store.write("key", "value1");
@@ -291,7 +339,7 @@ describe("Test Store - Behavior when Same Key is Used Multiple Times", () => {
     expect(store.read("key")).toBe("value2");
   });
 
-  it("updates key permissions", () => {
+  it("should update key permissions", () => {
     class TestStore extends Store {
       @Restrict("rw")
       public prop?: string;
@@ -318,7 +366,7 @@ These tests verify that nested keys correctly inherit permissions from their par
 */
 
 describe("Test Store - Permission Inheritance", () => {
-  it("nested key inherits parent key's permissions", () => {
+  it("should pass key permission to children stores", () => {
     class ParentStore extends Store {
       @Restrict("r")
       public parentProp = lazy(() => new ChildStore());
@@ -329,6 +377,8 @@ describe("Test Store - Permission Inheritance", () => {
       "parentProp:parentProp:parentProp"
     ) as Store;
     expect(nestedChildStore).toBeInstanceOf(ChildStore);
+    expect(baseChildStore.allowedToRead("parentProp")).toBe(true);
+    expect(nestedChildStore.allowedToRead("parentProp")).toBe(true);
     expect(baseChildStore.allowedToWrite("parentProp")).toBe(false);
     expect(nestedChildStore.allowedToWrite("parentProp")).toBe(false);
   });
