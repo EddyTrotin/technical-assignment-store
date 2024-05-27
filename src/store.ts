@@ -49,18 +49,18 @@ export class Store implements IStore {
 
     if (!this.allowedToRead(firstKey)) throw new Error('READ_NOT_ALLOWED');
 
-    const data = (this as any)[firstKey];
+    const data = (this as never)[firstKey] as Store;
     if (data instanceof Store) {
       return data.read(keys.join(':'));
     }
     let finalValue = data;
     if (keys.length > 0) {
-      keys.forEach((key, index) => {
+      keys.forEach((key: string) => {
         finalValue = data[key];
       });
     }
 
-    return finalValue
+    return finalValue;
   }
 
   write(path: string, value: StoreValue): StoreValue {
@@ -69,7 +69,7 @@ export class Store implements IStore {
     const keys = path.split(':');
     const firstKey = keys.shift() as string;
 
-    const data = store[firstKey];
+    const data = store[firstKey] as Store;
     if (data instanceof Store) {
       return data.write(keys.join(':'), value);
     }
@@ -77,12 +77,12 @@ export class Store implements IStore {
     if (!this.allowedToWrite(firstKey)) throw new Error('WRITE_NOT_ALLOWED');
 
     if (keys.length === 0) {
-      store[firstKey] = value
+      store[firstKey] = value;
     }
     else {
       const finalValue: Record<string, StoreValue> = {};
       keys.forEach((key, index) => {
-        finalValue[key] = (keys.length - 1 === index) ? value : {}
+        finalValue[key] = (keys.length - 1 === index) ? value : {};
       });
       store[firstKey] = finalValue;
     }
