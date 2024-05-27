@@ -98,6 +98,12 @@ export class Store implements IStore {
   }
 
   entries(): JSONObject {
-    throw new Error("Method not implemented.");
+    const entries: Record<string, JSONObject> = {}
+    for (const [key, value] of Object.entries(this)) {
+      if (key === 'defaultPolicy') continue;
+      if (!this.allowedToRead(key)) continue;
+      entries[key] = value
+    }
+    return entries
   }
 }
