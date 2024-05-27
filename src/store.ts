@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { JSONArray, JSONObject, JSONPrimitive, JSONValue } from "./json-types";
+import { JSONArray, JSONObject, JSONPrimitive } from "./json-types";
 
 export type StoreResult = Store | JSONPrimitive | undefined;
 
